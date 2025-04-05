@@ -23,7 +23,8 @@ namespace hook
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            textBox1.Text = Hook.s;
+            textBox1.Text += Hook.s;
+            Hook.s = "";
         }
 
         static class Hook
@@ -41,7 +42,6 @@ namespace hook
             private delegate IntPtr LowLevel_KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
             private static LowLevel_KeyboardProc _proc = HookCallback;
             private const int WH_KEYBOARD_LL = 13;
-            private const int WH_KEYDOWN = 0x0100;
             private const int WH_ALT = 0x0105;
 
             [DllImport("Kernel32.dll")]
@@ -60,14 +60,8 @@ namespace hook
                 if (nCode >= 0 && wParam == (IntPtr)WH_ALT)
                 {
                     int vkCode = Marshal.ReadInt32(lParam);
-
-
                     s += (Keys)vkCode;
-
-
                 }
-
-
                 return CallNextHookEx(_hookId, nCode, wParam, lParam);
             }
             public static void StartHook()
@@ -78,6 +72,11 @@ namespace hook
             {
                 UnhookWindowsHookEx(_hookId);
             }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Hook.s = "";
         }
     }
 }
