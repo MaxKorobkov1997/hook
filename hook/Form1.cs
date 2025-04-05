@@ -42,6 +42,7 @@ namespace hook
             private static LowLevel_KeyboardProc _proc = HookCallback;
             private const int WH_KEYBOARD_LL = 13;
             private const int WH_KEYDOWN = 0x0100;
+            private const int WH_ALT = 0x0105;
 
             [DllImport("Kernel32.dll")]
             private static extern IntPtr GetModuleHandle(string lpModuleName);
@@ -56,7 +57,7 @@ namespace hook
             }
             private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
             {
-                if (nCode >= 0 && wParam == (IntPtr)WH_KEYDOWN)
+                if (nCode >= 0 && wParam == (IntPtr)WH_ALT)
                 {
                     int vkCode = Marshal.ReadInt32(lParam);
 
