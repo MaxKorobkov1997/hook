@@ -29,32 +29,39 @@ namespace hook
 
         static class Hook
         {
-            [DllImport("user32.dll")]
-            private static extern IntPtr SetWindowsHookEx(int idHook, LowLevel_KeyboardProc Ipfn, IntPtr hMod, uint dwThreadId);
-            //IntPtr- целочисленный указатель на функцию, которая будет обработывать пользовательские хуки
-            [DllImport("user32.dll")]
-            private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-            [DllImport("user32.dll")]
-            [return: MarshalAs(UnmanagedType.Bool)]
+            private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+            private static IntPtr hookHandle = IntPtr.Zero;
+            private static HookProc hookProcedure;
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
             private static extern bool UnhookWindowsHookEx(IntPtr hhk);
 
-            private static IntPtr _hookId = IntPtr.Zero;
-            private delegate IntPtr LowLevel_KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
-            private static LowLevel_KeyboardProc _proc = HookCallback;
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
             private const int WH_KEYBOARD_LL = 13;
+            private const int WM_KEYDOWN = 0x0100;
             private const int WH_ALT = 0x0105;
 
-            [DllImport("Kernel32.dll")]
-            private static extern IntPtr GetModuleHandle(string lpModuleName);
+            public static void StartHook()
+            {
+                hookProcedure = HookCallback;
+                using (Process curProcess = Process.GetCurrentProcess())
+                using (ProcessModule curModule = curProcess.MainModule)
+                {
+                    hookHandle = SetWindowsHookEx(WH_KEYBOARD_LL, hookProcedure, IntPtr.Zero, 0);
+                }
+            }
 
+            public static void StopHook()
+            {
+                UnhookWindowsHookEx(hookHandle);
+            }
             public static string s;
 
-            private static IntPtr SetHook(LowLevel_KeyboardProc proc)
-            {
-                Process pr = Process.GetCurrentProcess();
-                ProcessModule prM = pr.MainModule;
-                return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(prM.ModuleName), 0);
-            }
             private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
             {
                 if (nCode >= 0 && wParam == (IntPtr)WH_ALT)
@@ -62,15 +69,7 @@ namespace hook
                     int vkCode = Marshal.ReadInt32(lParam);
                     s += (Keys)vkCode;
                 }
-                return CallNextHookEx(_hookId, nCode, wParam, lParam);
-            }
-            public static void StartHook()
-            {
-                _hookId = SetHook(_proc);
-            }
-            public static void StopHook()
-            {
-                UnhookWindowsHookEx(_hookId);
+                return CallNextHookEx(hookHandle, nCode, wParam, lParam);
             }
         }
 
