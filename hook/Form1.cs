@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,69 +15,44 @@ namespace hook
 {
     public partial class Form1 : Form
     {
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool ShowWindow(IntPtr hWnd, int showCmds);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        public const int MOD_ALT = 0x1;
+        public const int MOD_CONTROL = 0x2;
+        public const int MOD_SHIFT = 0x4;
+        public const int MOD_WIN = 0x8;
+        public const int WM_HOTKEY = 0x312;
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY)
+            {
+                ShowWindow(Handle, 1);
+                UnregisterHotKey(Handle, 1);
+                m.Result = (IntPtr)0;
+                return;
+            }
+            base.WndProc(ref m);
+        }
         public Form1()
         {
             InitializeComponent();
-            Hook.StartHook();
-            timer1.Enabled = true;
-        }
-
-        private void timer1_Tick(object sender, EventArgs e)
-        {
-            textBox1.Text += Hook.s;
-            Hook.s = "";
-        }
-
-        static class Hook
-        {
-            private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
-            private static IntPtr hookHandle = IntPtr.Zero;
-            private static HookProc hookProcedure;
-
-            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-            private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
-
-            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-            private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-            private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-            private const int WH_KEYBOARD_LL = 13;
-            private const int WM_KEYDOWN = 0x0100; //на любую клавищу
-            private const int WM_SYSKEYDOWN = 0x0104; //при зажатой alt (вывод с alt)
-            private const int WM_ALT = 0x0105; //при нажатой (вывод без alt)
-
-            public static void StartHook()
-            {
-                hookProcedure = HookCallback;
-                using (Process curProcess = Process.GetCurrentProcess())
-                using (ProcessModule curModule = curProcess.MainModule)
-                {
-                    hookHandle = SetWindowsHookEx(WH_KEYBOARD_LL, hookProcedure, IntPtr.Zero, 0);
-                }
-            }
-
-            public static void StopHook()
-            {
-                UnhookWindowsHookEx(hookHandle);
-            }
-            public static string s;
-
-            private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
-            {
-                if (nCode >= 0 && wParam == (IntPtr)WM_SYSKEYDOWN)
-                {
-                    int vkCode = Marshal.ReadInt32(lParam);
-                    s += (Keys)vkCode;
-                }
-                return CallNextHookEx(hookHandle, nCode, wParam, lParam);
-            }
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Hook.s = "";
+            bool res = RegisterHotKey(this.Handle, 1, MOD_SHIFT, (uint)Keys.Z);
+            if (res == false) MessageBox.Show("as");
+            ShowWindow(Handle, 0);
         }
     }
 }
