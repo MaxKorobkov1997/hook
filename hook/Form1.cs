@@ -34,10 +34,21 @@ namespace hook
 
         private void OnHotKeyPressed()
         {
-            // Твоя логика при нажатии Shift+Z
-            this.WindowState = FormWindowState.Normal; // разворачиваем, если было свёрнуто
-            this.Activate(); // возвращаем фокус
-            MessageBox.Show("Сработала горячая клавиша Shift+Z!");
+            if (!this.Visible || this.WindowState == FormWindowState.Minimized)
+            {
+                // Окно было скрыто или свёрнуто — показываем
+                this.Show();
+                this.Visible = true;
+                this.ShowInTaskbar = true;
+                this.WindowState = FormWindowState.Normal;
+                this.Activate();
+            }
+            else
+            {
+                // Окно видимо — вывести на передний план
+                this.BringToFront();
+                this.Activate();
+            }
         }
 
         public Form1()
@@ -47,22 +58,12 @@ namespace hook
 
         private void button1_Click(object sender, EventArgs e)
         {
-            bool res = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_SHIFT, (uint)Keys.Z);
-            if (!res)
-            {
-                int error = Marshal.GetLastWin32Error();
-                MessageBox.Show($"Не удалось зарегистрировать горячую клавишу. Ошибка Win32: {error}");
-                return;
-            }
-
-            // Сворачиваем форму после успешной регистрации
-            this.WindowState = FormWindowState.Minimized;
+            Hide();
         }
 
-        protected override void OnFormClosing(FormClosingEventArgs e)
+        private void Form1_Load(object sender, EventArgs e)
         {
-            UnregisterHotKey(Handle, HOTKEY_ID);
-            base.OnFormClosing(e);
+            RegisterHotKey(this.Handle, HOTKEY_ID, MOD_SHIFT, (int)Keys.Z);
         }
     }
 }
